@@ -1,0 +1,3 @@
+# GWAS_postchallenge_insulin
+This repository contains code related to Williamson et al, "Genome-wide association study of postprandial glucose metabolism and functional characterisation identifies candidate genes for insulin-stimulated glucose uptake", Nature Genetics (2023).
+This repository provides exemplars of the code and scripts used for the core analysis done for the paper. Please keep in mind that most this code has been written to run on the HPC system of the University of Cambridge and requires dedicated input files, which are not always sharable due to privacy reasons, e.g., individual level genotypes. While the authors are happy to answer questions, there will be no active maintenance of the code stored.
