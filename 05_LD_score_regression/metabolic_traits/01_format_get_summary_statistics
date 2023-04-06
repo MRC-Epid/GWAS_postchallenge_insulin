@@ -1,0 +1,126 @@
+#MarkerName	Allele1	Allele2	Freq1	Effect	StdErr	Pvalue	TotalSampleSize	chr	pos
+cd /analysis_dir/ldsc
+
+
+module load python-2.7.13-gcc-5.4.0-yubmrmn
+module load anaconda/3.2019-10
+#conda env create --force --file environment.yml python=2.7.13
+source activate ldsc
+
+
+#########################################################################
+## format glycaemic traits and T2D, not included in public ldsc stats  ##
+#########################################################################
+
+
+## need rsid in summ stats file
+## 2hr Glucose - MAGIC chen et al 2021
+
+python munge_sumstats.py \
+--sumstats /input_dir/Glu120_MA_input_withRSID.txt.gz \
+--merge-alleles w_hm3.snplist \
+--chunksize 500000 \
+--snp rsid \
+--a1 Allele1 \
+--a2 Allele2 \
+--p Pvalue \
+--frq Freq1 \
+--N-col TotalSampleSize \
+--out /input_dir/formatted_summ_stats/Glu120_adjBMI
+
+## Fasting insulin - MAGIC chen et al 2021
+
+python munge_sumstats.py \
+--sumstats  /input_dir/FI_MA_input_withRSID.txt.gz \
+--merge-alleles w_hm3.snplist \
+--chunksize 500000 \
+--snp rsid \
+--a1 Allele1 \
+--a2 Allele2 \
+--p Pvalue \
+--frq Freq1 \
+--N-col TotalSampleSize \
+--out /input_dir/formatted_summ_stats/FI_adjBMI
+
+
+### T2D MVP
+
+#T2DMVP_MA_input.txt.gz
+
+python munge_sumstats.py \
+--sumstats /inputdir/T2DMVP_MA_input_withRSID.txt.gz \
+--merge-alleles w_hm3.snplist \
+--chunksize 500000 \
+--snp rsid \
+--a1 Allele1 \
+--a2 Allele2 \
+--p Pvalue \
+--frq Freq1 \
+--N-col TotalSampleSize \
+--out /input_dir/formatted_summ_stats/T2D_MVP
+
+## WHR adjBMI - GIANT + UKB 
+
+python munge_sumstats.py \
+--sumstats /input_dir/WHRadjBMI_MA_input_withRSID.txt.gz \
+--merge-alleles w_hm3.snplist \
+--chunksize 500000 \
+--snp rsid \
+--a1 Allele1 \
+--a2 Allele2 \
+--p Pvalue \
+--frq Freq1 \
+--N-col TotalSampleSize \
+--out /input_dir/formatted_summ_stats/WHRadjBMI
+
+
+conda deactivate
+
+
+## other cardiometabolic traits downloaded preformatted from LDSC resource
+cd /input_dir/summ_stats
+
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_Type_2_Diabetes.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Glucose.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_HbA1c.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.body_BMIz.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.disease_CARDIOVASCULAR.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.disease_DIABETES_ANY_DIAGNOSED.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.disease_ENDOCRINE_DIABETES.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.disease_HYPERTENSION_DIAGNOSED.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.disease_T2D.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.bp_DIASTOLICadjMEDz.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.bp_SYSTOLICadjMEDz.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_Type_1_Diabetes.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_AlanineAminotransferase.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Albumin.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_AlkalinePhosphatase.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_ApolipoproteinA.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_ApolipoproteinB.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_AspartateAminotransferase.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Calcium.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Cholesterol.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_CreactiveProtein.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Creatinine.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_CystatinC.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_DirectBilirubin.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_GammaGlutamyltransferase.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_HDLcholesterol.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_IGF1.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_LDLdirect.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_LipoproteinA.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Phosphate.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_SHBG.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_TotalBilirubin.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_TotalProtein.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Triglycerides.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Urate.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.biochemistry_Urea.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_BMI1.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_CD_deLange2017.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_CardioembolicStroke_Malik2018.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_Coronary_Artery_Disease.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/PASS_Lean_Body_Mass_Zillikens_2017.sumstats
+wget https://storage.googleapis.com/broad-alkesgroup-public/LDSCORE/all_sumstats/UKB_460K.body_WHRadjBMIz.sumstats
+
+

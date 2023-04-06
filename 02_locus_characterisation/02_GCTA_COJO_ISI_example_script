@@ -1,0 +1,8 @@
+## run GCTA for the regions of interest 
+
+## info at https://cnsgenomics.com/software/gcta/#COJO
+module load gcta/1.26.0
+
+## example GCTA code to identifiy possible secondary signals
+gcta64 --bfile Fenland-OMICS_chr3 --cojo-collinear 0.8 --cojo-file ISI_adjBMI_EUR_DGC_locus.ma --cojo-slct --cojo-p 5E-8 --out Fenland-OMICS_ISIadjBMI_locus_colin08 > locus_colin08.log
+

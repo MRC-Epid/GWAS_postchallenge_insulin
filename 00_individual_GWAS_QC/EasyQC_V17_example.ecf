@@ -1,0 +1,185 @@
+##################################################################################################################################################################
+##### EasyQC-script to check GWAS results based on HRC/1000G imputation
+##### EasyQC version: 17.3
+##### Programmer: Thomas Winkler, 2017-07-20
+##### Contact: thomas.winkler@klinik.uni-regensburg.de
+
+
+##################################################################################################################################################################
+### How to.
+### 1. Adjust paths at four positions in the ecf file
+### 	+ path to output (DEFINE)
+###  	+ paths to input files (EASYIN)
+###		+ path to imputation info files (LOADINFO)
+###  	+ path to appropriate reference file (MERGE)
+### 2. Save ecf file by replacing <STUDY> and <PANEL> in the ecf-filename with the actual study name and the reference panel, eg checkv7_COLAUS_HRC.ecf
+### 3. Start R by typing > R at command line
+### 4. Start program by typing EasyQC("/path2ecf/checkv7_COLAUS_HRC.ecf")
+### 5. Check created plots/report for issues and fill google spreadsheet
+##################################################################################################################################################################
+### <1> TO DO: Define here the path to the results folder that will be used to store QC results:
+## NOTE: It may be useful to create a directory to store all QCed output before running EasyQC
+
+## col in is column name in that specific study, col out what you want to call this. 
+DEFINE	--pathOut /path_to_project/easyQC_Output/METSIM/
+	  --strMissing .
+	  --strSeparator TAB
+		--acolIn MARKER_ID;CHR;POS;EA;NEA;NS;EAF;HWE.P;callrate;BETA;SEBETA;PVALUE;Genotyped;infotype;Rsq
+		--acolInClasses character;character;character;character;character;numeric;numeric;numeric;numeric;numeric;numeric;numeric;character;character;numeric
+		--acolNewName SNPID;CHR;POS;EFFECT_ALLELE;NON_EFFECT_ALLELE;N;EAF;HWE_P;CALL_RATE;BETA;SE;P_VAL;IMPUTED;INFO_TYPE;Rsq
+	  --blnOverwriteResults 1
+          --blnUseFastRead 0
+
+
+
+### <2> TO DO: DEFINE here the paths to all input files of the current STUDY and list .gz files:
+### TW: I would propose to qc all study files (across traits) in one QC run that will create summaries by study
+EASYIN --fileIn /path_to_project/Studies/METSIM/FCI_adjBMI_METSIM_EUR_EPACTS_MINIMAC_20200114_KAB.txt.gz
+EASYIN --fileIn /path_to_project/Studies/METSIM/FCI_noBMI_METSIM_EUR_EPACTS_MINIMAC_20200114_KAB.txt.gz
+
+##################################################################################################################################################################
+## EASYQC Scripting interface:
+START EASYQC
+####################
+## 1. Add MAC, add cpaid, add imputation Rsq, and write out chr-wise files
+ADDCOL --rcdAddCol round(2*pmin(EAF,1-EAF)*N,1) --colOut MAC
+CREATECPAID --colInA1 NON_EFFECT_ALLELE --colInA2 EFFECT_ALLELE --colInChr CHR --colInPos POS
+
+####################
+## 2. Apply minimal filtering thresholds and count number of variants dropped:
+## Criteria: a. monomorphic; b. low class rate (<95%); c. HWE failure (p<1E-5); d. Low imputation quality (Rsq<0.3); e. duplicated markers; f.SE > 10
+
+CLEAN --rcdClean EAF==0|EAF==1 --strCleanName numDrop_Monomorph
+CLEAN --rcdClean CALL_RATE<0.95 --strCleanName numDrop_LowCallrate95
+CLEAN --rcdClean HWE_P<1e-5 --strCleanName numDrop_LowHwe1e5
+CLEAN --rcdClean MAC<3 --strCleanName numDrop_LowMAC3
+CLEAN --rcdClean Rsq<0.3 --strCleanName numDrop_LowRsq3
+CLEAN --rcdClean SE>10|SE==Inf --strCleanName numDrop_LargeSE10
+
+####################
+## 3. Filter duplicate variants and keep duplicate with larger sample size
+
+CLEANDUPLICATES --colInMarker cpaid  --strMode samplesize --colN N
+
+####################
+## 4. Sanity checks:
+
+CLEAN --rcdClean is.na(EFFECT_ALLELE)&is.na(NON_EFFECT_ALLELE) --strCleanName numDrop_Missing_ALLELES
+CLEAN --rcdClean is.na(EAF) --strCleanName numDrop_Missing_EAF
+CLEAN --rcdClean EAF<0|EAF>1 --strCleanName numDrop_Invalid_EAF
+CLEAN --rcdClean is.na(BETA) --strCleanName numDrop_Missing_BETA
+CLEAN --rcdClean abs(BETA)==Inf --strCleanName numDrop_Inf_BETA
+CLEAN --rcdClean is.na(P_VAL) --strCleanName numDrop_Missing_PVALUE
+CLEAN --rcdClean P_VAL<0|P_VAL>1 --strCleanName numDrop_Invalid_PVALUE
+CLEAN --rcdClean is.na(N) --strCleanName numDrop_Missing_N
+
+RADDCOL --rcdRAddCol numDrop_Missing_ALLELES+numDrop_Missing_EAF+numDrop_Invalid_EAF+numDrop_Missing_BETA+numDrop_Inf_BETA+numDrop_Missing_PVALUE+numDrop_Invalid_PVALUE+numDrop_Missing_N
+		--colROut numDrop_MissingOrInvalid
+
+####################
+## 5. Compare low vs high quality variants:
+
+CALCULATE --rcdCalc length(CHR) --strCalcName num_HighQual
+RADDCOL --rcdRAddCol numVarIn-num_HighQual --colROut num_LowQual
+
+####################
+## 6. Count different variant types and formats used (eg SNPs, INDELs etc)
+## Are INDELs coded with {R/I, R/D, I/D } or with 'Sequence coding', eg ACA/ACAG?
+
+GETVARTYPE --colInCpaid cpaid
+
+####################
+## 7. Compare number of variants across chromosomes - Is Chr X coded "X" or "23"?
+
+GETNUM --rcdGetNum CHR%in%c(1:22) --strGetNumName num_ChrAut
+GETNUM --rcdGetNum CHR=="X" --strGetNumName num_ChrX
+GETNUM --rcdGetNum CHR==23 --strGetNumName num_Chr23
+
+####################
+## 8. Load imputation qualities and obtain descriptive statistics:
+
+GETNUM --rcdGetNum EAF<0.01|EAF>0.99 --strGetNumName num_Rare
+GETNUM --rcdGetNum (EAF>=0.01&EAF<0.05)|(EAF>0.95&EAF<=0.99) --strGetNumName num_LowFreq
+GETNUM --rcdGetNum EAF>=0.05&EAF<=0.95 --strGetNumName num_Common
+
+GETNUM --rcdGetNum is.na(Rsq) --strGetNumName num_Missing_Rsq
+GETNUM --rcdGetNum Rsq<0.3 --strGetNumName num_RsqLt03
+GETNUM --rcdGetNum Rsq>=0.3&Rsq<0.6 --strGetNumName num_Rsq03to06
+GETNUM --rcdGetNum Rsq>=0.6 --strGetNumName num_RsqGt06
+
+CALCULATE --rcdCalc median(Rsq[which(EAF<0.01|EAF>0.99)],na.rm=T) --strCalcName median_Rsq_Rare
+CALCULATE --rcdCalc median(Rsq[which((EAF>=0.01&EAF<0.05)|(EAF>0.95&EAF<=0.99))],na.rm=T) --strCalcName median_Rsq_LowFreq
+CALCULATE --rcdCalc median(Rsq[which(EAF>=0.05&EAF<=0.95)],na.rm=T) --strCalcName median_Rsq_Common
+
+CALCULATE --rcdCalc min(N,na.rm=T) --strCalcName min_N_INFORMATIVE
+CALCULATE --rcdCalc max(N,na.rm=T) --strCalcName max_N_INFORMATIVE
+
+CALCULATE --rcdCalc min(P_VAL,na.rm=T) --strCalcName min_PVALUE
+CALCULATE --rcdCalc min(P_VAL[EAF>=0.01&EAF<=0.99],na.rm=T) --strCalcName min_PVALUE_Common
+
+####################
+## 9. QQ plot + GC lambda (written into QQplot area)
+## Four curves are being created: AllVar, Rare Variants (<1%), LowFreq (>=1% & <5%), common (>=5%)
+
+QQPLOT  --acolQQPlot P_VAL;P_VAL;P_VAL;P_VAL
+		--arcdInclude NA;pmin(EAF,1-EAF,na.rm=T)<0.01;pmin(EAF,1-EAF,na.rm=T)>=0.01&pmin(EAF,1-EAF,na.rm=T)<0.05;pmin(EAF,1-EAF,na.rm=T)>=0.05
+		--astrColour black;red;orange;green
+		--blnAddLambdaGC 1
+		--numPvalOffset 0.05
+		--strPlotName QQPLOT
+		--strMode subplot
+                --anumCex 0.4;0.4;0.4;0.4
+
+####################
+## 10. Trait transformation plot, median(SE) vs sqrt(max(N))
+
+CALCULATE --rcdCalc median(SE, na.rm=T) --strCalcName median_SE
+CALCULATE --rcdCalc median(1/sqrt(2*EAF*(1-EAF)), na.rm=T) --strCalcName c_trait_transf
+
+RADDCOL --rcdRAddCol c_trait_transf/median_SE --colROut ttplot_y
+RADDCOL --rcdRAddCol  sqrt(max_N_INFORMATIVE) --colROut ttplot_x
+RADDCOL --rcdRAddCol ttplot_y/ttplot_x --colROut ttplot_slope
+
+RPLOT 	--rcdRPlotX sqrt(max_N_INFORMATIVE)
+		--rcdRPlotY c_trait_transf/median_SE
+		--arcdAdd2Plot abline(0,1,col='orange')
+		--strAxes zeroequal
+		--strPlotName SENPLOT
+
+####################
+## 11. AF Checks
+
+MERGE 	--colInMarker cpaid
+		--fileRef /path_to_project/easyQC/ReferenceFiles/HRC.r1-1.GRCh37.wgs.mac5.sites.tab.cpaid.maf001.gz
+		--acolIn cpaid;ref;alt;aaf
+		--acolInClasses character;character;character;numeric
+		--strRefSuffix .ref
+		--colRefMarker cpaid
+		--blnInAll 0 --blnRefAll 0
+		--blnWriteNotInRef 1
+
+ADJUSTALLELESSIMPLE	--colInA1 EFFECT_ALLELE
+					--colInA2 NON_EFFECT_ALLELE
+					--acolInFreq EAF
+					--acolInBeta BETA
+					--colRefA1 alt.ref
+					--colRefA2 ref.ref
+
+AFCHECK --colInFreq EAF
+		--colRefFreq aaf.ref
+		--blnPlotAll 0
+		--numLimOutlier 0.2
+
+RADDCOL --rcdRAddCol AAS.Checked-AFCHECK.numOutlier --colROut AFok
+RADDCOL --rcdRAddCol AFCHECK.numOutlier --colROut AFoutlier
+
+BRPLOT --acolBRPlot AFok;AFoutlier;NotInRef
+		--astrColour green;red;grey
+		--numParLas 1
+		--strPlotName BARPLOT.HighQualVar.AFchecks
+
+## Save cleaned file for upload to the ftp-site
+WRITE   --strPrefix CLEANED. --strMissing . --strMode txt
+
+STOP EASYQC
+#################################################################################################################

@@ -1,0 +1,12 @@
+
+## info at https://cnsgenomics.com/software/gcta/#COJO
+module load gcta/1.26.0
+
+
+##calculate conditional stats on primary and secondary signals identified in PPP1R3B 
+
+#condition on secondary
+gcta64 --bfile /analysis_dir/Fenland-OMICS_chr8 --cojo-collinear 0.8 --cojo-file /analysis_dir/FCI_adjBMI_EUR_PPP1R3B.ma  --cojo-p 5E-6 --cojo-cond cond_PPP1R3B.snplist --out ./secondary_signals/conditional_Fenland-OMICS_FCI_adjBMI_PPP1R3B_cond_secondary_chr8
+
+#condition on primary
+gcta64 --bfile /analysis_dir/Fenland-OMICS_chr8 --cojo-collinear 0.8 --cojo-file /analysis_dir/FCI_adjBMI_EUR_PPP1R3B.ma  --cojo-p 5E-6 --cojo-cond cond_primary_PPP1R3B.snplist --out ./secondary_signals/conditional_Fenland-OMICS_FCI_adjBMI_PPP1R3B_cond_primary_chr8
